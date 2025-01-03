@@ -5,6 +5,7 @@ let users = require("./auth_users.js").users;
 const public_users = express.Router();
 
 public_users.post("/register", (req, res) => {
+
   const { username, password } = req.body; // Extract username and password from request body
 
   try {
@@ -37,108 +38,143 @@ public_users.post("/register", (req, res) => {
 });
 
 // Get the book list available in the shop
-public_users.get("/", function (req, res) {
-  try {
-    // Check if books data exists
-    if (!books || Object.keys(books).length === 0) {
-      return res
-        .status(404)
-        .json({ message: "No books available in the shop." });
-    }
+public_users.get("/", (req, res) => {
+  // Simulate asynchronous data retrieval
+  const getBooks = () => Promise.resolve(books);
 
-    // Return the list of books formatted using JSON.stringify
-    const formattedBooks = JSON.stringify(books, null, 2); // Pretty-print with 2-space indentation
-    res.setHeader("Content-Type", "application/json"); // Set content type explicitly
-    return res.status(200).send(formattedBooks); // Send formatted JSON string
-  } catch (error) {
-    // Handle unexpected errors
-    return res
-      .status(500)
-      .json({ error: "An error occurred while retrieving books." });
-  }
+  getBooks()
+    .then((booksData) => {
+      // Check if books data exists
+      if (!booksData || Object.keys(booksData).length === 0) {
+        return res
+          .status(404)
+          .json({ message: "No books available in the shop." });
+      }
+
+      // Return the list of books formatted using JSON.stringify
+      const formattedBooks = JSON.stringify(booksData, null, 2); // Pretty-print with 2-space indentation
+      res.setHeader("Content-Type", "application/json"); // Set content type explicitly
+      return res.status(200).send(formattedBooks); // Send formatted JSON string
+    })
+    .catch((error) => {
+      // Handle unexpected errors
+      return res
+        .status(500)
+        .json({ error: "An error occurred while retrieving books." });
+    });
 });
 
+
 // Get book details based on ISBN
-public_users.get("/isbn/:isbn", function (req, res) {
+public_users.get("/isbn/:isbn", (req, res) => {
   const { isbn } = req.params; // Extract ISBN from request parameters
 
-  try {
-    // Check if the book exists in the database
-    const book = books[isbn];
-    if (!book) {
-      return res
-        .status(404)
-        .json({ message: `Book with ISBN ${isbn} not found.` });
-    }
+  // Simulate an asynchronous operation using a Promise
+  const fetchBookByISBN = (isbn) => {
+    return new Promise((resolve, reject) => {
+      const book = books[isbn];
+      if (book) {
+        resolve(book); // Resolve the Promise with the book details
+      } else {
+        reject(new Error(`Book with ISBN ${isbn} not found.`)); // Reject the Promise if book not found
+      }
+    });
+  };
 
-    // Return the book details
-    const formattedBook = JSON.stringify(book, null, 2); // Pretty-print with 2-space indentation
-    res.setHeader("Content-Type", "application/json"); // Set content type explicitly
-    return res.status(200).send(formattedBook); // Send formatted JSON string
-  } catch (error) {
-    // Handle unexpected errors
-    return res
-      .status(500)
-      .json({ error: "An error occurred while retrieving the book details." });
-  }
+  fetchBookByISBN(isbn)
+    .then((book) => {
+      // Return the book details
+      const formattedBook = JSON.stringify(book, null, 2); // Pretty-print with 2-space indentation
+      res.setHeader("Content-Type", "application/json"); // Set content type explicitly
+      return res.status(200).send(formattedBook); // Send formatted JSON string
+    })
+    .catch((error) => {
+      if (error.message.includes("not found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      // Handle unexpected errors
+      return res
+        .status(500)
+        .json({ error: "An error occurred while retrieving the book details." });
+    });
 });
 
 // Get book details based on author
-public_users.get("/author/:author", function (req, res) {
+public_users.get("/author/:author", (req, res) => {
   const { author } = req.params; // Extract author from request parameters
 
-  try {
-    // Obtain all keys from the 'books' object and find matching books
-    const matchingBooks = Object.keys(books)
-      .filter((key) => books[key].author.toLowerCase() === author.toLowerCase())
-      .map((key) => books[key]); // Retrieve book details for matching keys
+  // Simulate an asynchronous operation using a Promise
+  const fetchBooksByAuthor = (author) => {
+    return new Promise((resolve, reject) => {
+      // Obtain all keys from the 'books' object and find matching books
+      const matchingBooks = Object.keys(books)
+        .filter((key) => books[key].author.toLowerCase() === author.toLowerCase())
+        .map((key) => books[key]); // Retrieve book details for matching keys
 
-    // If no books match the author, return a 404 response
-    if (matchingBooks.length === 0) {
+      // Resolve or reject based on the result
+      if (matchingBooks.length > 0) {
+        resolve(matchingBooks); // Resolve the Promise with matching books
+      } else {
+        reject(new Error(`No books found by author ${author}.`)); // Reject the Promise if no matches
+      }
+    });
+  };
+
+  fetchBooksByAuthor(author)
+    .then((matchingBooks) => {
+      // Return the matching books
+      const formattedBooks = JSON.stringify(matchingBooks, null, 2); // Pretty-print with 2-space indentation
+      res.setHeader("Content-Type", "application/json"); // Set content type explicitly
+      return res.status(200).send(formattedBooks); // Send formatted JSON string
+    })
+    .catch((error) => {
+      if (error.message.includes("No books found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      // Handle unexpected errors
       return res
-        .status(404)
-        .json({ message: `No books found by author ${author}.` });
-    }
-
-    // Return the matching books
-    const formattedBooks = JSON.stringify(matchingBooks, null, 2); // Pretty-print with 2-space indentation
-    res.setHeader("Content-Type", "application/json"); // Set content type explicitly
-    return res.status(200).send(formattedBooks); // Send formatted JSON string
-  } catch (error) {
-    // Handle unexpected errors
-    return res
-      .status(500)
-      .json({ error: "An error occurred while retrieving the books." });
-  }
+        .status(500)
+        .json({ error: "An error occurred while retrieving the books." });
+    });
 });
 
 // Get all books based on title
-public_users.get("/title/:title", function (req, res) {
+public_users.get("/title/:title", (req, res) => {
   const { title } = req.params; // Extract title from request parameters
 
-  try {
-    // Obtain all keys from the 'books' object and find matching books
-    const matchingBooks = Object.keys(books)
-      .filter((key) => books[key].title.toLowerCase() === title.toLowerCase())
-      .map((key) => books[key]); // Retrieve book details for matching keys
+  // Simulate an asynchronous operation using a Promise
+  const fetchBooksByTitle = (title) => {
+    return new Promise((resolve, reject) => {
+      // Obtain all keys from the 'books' object and find matching books
+      const matchingBooks = Object.keys(books)
+        .filter((key) => books[key].title.toLowerCase() === title.toLowerCase())
+        .map((key) => books[key]); // Retrieve book details for matching keys
 
-    // If no books match the title, return a 404 response
-    if (matchingBooks.length === 0) {
+      // Resolve or reject based on the result
+      if (matchingBooks.length > 0) {
+        resolve(matchingBooks); // Resolve the Promise with matching books
+      } else {
+        reject(new Error(`No books found with title "${title}".`)); // Reject the Promise if no matches
+      }
+    });
+  };
+
+  fetchBooksByTitle(title)
+    .then((matchingBooks) => {
+      // Return the matching books
+      const formattedBooks = JSON.stringify(matchingBooks, null, 2); // Pretty-print with 2-space indentation
+      res.setHeader("Content-Type", "application/json"); // Set content type explicitly
+      return res.status(200).send(formattedBooks); // Send formatted JSON string
+    })
+    .catch((error) => {
+      if (error.message.includes("No books found")) {
+        return res.status(404).json({ message: error.message });
+      }
+      // Handle unexpected errors
       return res
-        .status(404)
-        .json({ message: `No books found with title "${title}".` });
-    }
-
-    // Return the matching books
-    const formattedBooks = JSON.stringify(matchingBooks, null, 2); // Pretty-print with 2-space indentation
-    res.setHeader("Content-Type", "application/json"); // Set content type explicitly
-    return res.status(200).send(formattedBooks); // Send formatted JSON string
-  } catch (error) {
-    // Handle unexpected errors
-    return res
-      .status(500)
-      .json({ error: "An error occurred while retrieving the books." });
-  }
+        .status(500)
+        .json({ error: "An error occurred while retrieving the books." });
+    });
 });
 
 //  Get book review
